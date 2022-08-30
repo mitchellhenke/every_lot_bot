@@ -1,0 +1,14 @@
+name: Post
+on: push
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: '23'
+          elixir-version: '1.13'
+      - run: mix deps.get
+      - run: mix compile
