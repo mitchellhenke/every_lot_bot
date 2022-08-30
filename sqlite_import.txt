@@ -1,5 +1,8 @@
+CREATE TABLE lots(id INTEGER PRIMARY KEY, tax_key,address,zip,city,lat REAL,lon REAL,year_built,zoning,geo_alder,number_stories,tweeted INTEGER);
 .mode csv
-.import data.csv lots
+.import data.csv lots_temp
+INSERT INTO lots(tax_key,address,zip,city,lat,lon,year_built,zoning,geo_alder,number_stories,tweeted) SELECT * from lots_temp;
+drop table lots_temp;
 
 ATTACH 'old_lots.db' AS OLD;
 
