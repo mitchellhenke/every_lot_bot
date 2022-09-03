@@ -2,6 +2,7 @@ defmodule EveryLotBot do
   @moduledoc """
   Documentation for `EveryLotBot`.
   """
+  NimbleCSV.define(MyCSV, newlines: ["\n"])
 
   @doc """
   Hello world.
@@ -49,16 +50,7 @@ defmodule EveryLotBot do
   zip INT,
   tweeted TEXT
   );
-
-  ## Examples
-
-      iex> EveryLotBot.hello()
-      :world
-
   """
-  def hello do
-    :world
-  end
 
   def get_streetview_image(property) do
     search_query = "#{property.address}, #{property.city}, WI"
@@ -76,108 +68,117 @@ defmodule EveryLotBot do
 
     full_url = "#{url}?#{URI.encode_query(params)}"
 
-    {status, body} =
-      with req <- Finch.build(:get, full_url),
-           {:ok, %{body: body, status: status}} <- Finch.request(req, MyFinch) do
-        {status, body}
-      end
+    with req <- Finch.build(:get, full_url),
+         {:ok, %{body: body, status: status}} <- Finch.request(req, MyFinch) do
+      {status, body}
+    end
   end
 
   def post_update do
-    Finch.start_link(name: MyFinch)
-
     date =
       DateTime.now!("America/Chicago", Tzdata.TimeZoneDatabase)
       |> DateTime.to_date()
 
-    zip = EveryLotBot.get_zip_for_date(date)
-    property = EveryLotBot.get_property_by_zip(zip)
-    {status, body} = EveryLotBot.get_streetview_image(property)
-    status = "#{property.address}, #{property.zip}"
+    properties = EveryLotBot.load_properties()
+    zip = EveryLotBot.get_zip_for_date(properties, date)
+    property = EveryLotBot.get_property_by_zip(properties, zip)
+    {_status, body} = EveryLotBot.get_streetview_image(property)
+    tweet_content = "#{property.address}, #{property.zip}"
 
-    ExTwitter.configure(
-      [
-        consumer_key: System.fetch_env!("TWITTER_CONSUMER_API_KEY"),
-        consumer_secret: System.fetch_env!("TWITTER_CONSUMER_ACCESS_TOKEN_SECRET"),
-        access_token: System.fetch_env!("TWITTER_CONSUMER_API_KEY"),
-        access_token_secret: System.fetch_env!("TWITTER_CONSUMER_API_SECRET")
-      ]
-    )
-    ExTwitter.update_with_media(status, body)
+    # tweet = ExTwitter.update_with_media(tweet_content, body)
+    EveryLotBot.mark_as_tweeted(properties, property.tax_key, "1")
   end
 
-  def get_zip_for_date(date) do
+  def get_zip_for_date(properties, date) do
     formatted_date = Date.to_iso8601(date)
     hash = :crypto.hash(:sha, formatted_date) |> :binary.decode_unsigned()
-    {:ok, conn} = Exqlite.Sqlite3.open("lots.db")
 
-    {:ok, statement} =
-      Exqlite.Sqlite3.prepare(conn, "select distinct(zip) from lots where tweeted = 0")
-
-    {:ok, rows} = Exqlite.Sqlite3.fetch_all(conn, statement)
-
-    zips = List.flatten(rows) |> Enum.sort()
+    zips = Enum.filter(properties, fn property ->
+      property.tweeted == "0"
+    end)
+    |> Enum.reduce(MapSet.new, fn property, zips ->
+      MapSet.put(zips, property.zip)
+    end)
 
     index = rem(hash, Enum.count(zips))
     Enum.at(zips, index)
   end
 
-  def get_property_by_zip(zip) do
-    {:ok, conn} = Exqlite.Sqlite3.open("lots.db")
-
-    {:ok, statement} =
-      Exqlite.Sqlite3.prepare(
-        conn,
-        "SELECT * FROM lots where tweeted = 0 ORDER BY zip <> ?, zip, tax_key ASC LIMIT 1;"
-      )
-
-    :ok = Exqlite.Sqlite3.bind(conn, statement, [zip])
-
-    {:ok,
-     [
-       [
-         id,
-         tax_key,
-         address,
-         zip,
-         city,
-         lat,
-         lng,
-         year_built,
-         zoning,
-         alder,
-         number_stories,
-         tweeted
-       ]
-     ]} = Exqlite.Sqlite3.fetch_all(conn, statement)
-
-    %{
-      id: id,
-      tax_key: tax_key,
-      address: address,
-      zip: zip,
-      city: city,
-      lat: lat,
-      lng: lng,
-      year_built: year_built,
-      zoning: zoning,
-      alder: alder,
-      number_stories: number_stories,
-      tweeted: tweeted
-    }
+  def get_property_by_zip(properties, zip) do
+    Enum.filter(properties, fn property ->
+      property.tweeted == "0"
+    end)
+    |> Enum.sort_by(fn property ->
+      {property.zip != zip, property.zip, property.tax_key}
+    end)
+    |> hd()
   end
 
-  def mark_as_tweeted(id, tweet_id) do
-    {:ok, conn} = Exqlite.Sqlite3.open("lots.db")
+  def mark_as_tweeted(properties, tax_key, tweet_id) do
+    rows =
+      Enum.map(properties, fn property ->
+        if property.tax_key == tax_key do
+          [
+            property.tax_key,
+            property.address,
+            property.zip,
+            property.city,
+            property.lat,
+            property.lon,
+            property.year_built,
+            property.zoning,
+            property.geo_alder,
+            property.number_stories,
+            tweet_id
+          ]
+        else
+          [
+            property.tax_key,
+            property.address,
+            property.zip,
+            property.city,
+            property.lat,
+            property.lon,
+            property.year_built,
+            property.zoning,
+            property.geo_alder,
+            property.number_stories,
+            property.tweeted
+          ]
+        end
+      end)
 
-    {:ok, statement} =
-      Exqlite.Sqlite3.prepare(
-        conn,
-        "UPDATE lots set tweeted = ? where id = ?"
-      )
+    headers = [
+      "tax_key",
+      "address",
+      "zip",
+      "city",
+      "lat",
+      "lon",
+      "year_built",
+      "zoning",
+      "geo_alder",
+      "number_stories",
+      "tweeted"
+    ]
 
-    :ok = Exqlite.Sqlite3.bind(conn, statement, [tweet_id, id])
-    result = Exqlite.Sqlite3.fetch_all(conn, statement)
+    stream = File.stream!("data.csv")
+    MyCSV.dump_to_stream([headers | rows])
+    |> Stream.into(stream)
+    |> Stream.run()
+  end
+
+  def load_properties do
+    with {:ok, content} <- File.read("data.csv"),
+         csv_rows <- MyCSV.parse_string(content, skip_headers: false) do
+      {[headers], rows} = Enum.split(csv_rows, 1)
+      headers = Enum.map(headers, &String.to_atom/1)
+
+      Enum.map(rows, fn row ->
+        Enum.zip(headers, row)
+        |> Enum.into(%{})
+      end)
+    end
   end
 end
 

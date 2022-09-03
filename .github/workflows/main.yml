@@ -27,3 +27,6 @@ jobs:
           mix local.hex --force
           mix deps.get
           mix deps.compile
+      - name: Post Update
+        run: |
+          mix every_lot_bot.post_update
