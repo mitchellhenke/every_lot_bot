@@ -8,6 +8,7 @@ defmodule Mix.Tasks.EveryLotBot.PostUpdate do
     api_key_secret = System.fetch_env!("TWITTER_CONSUMER_API_SECRET")
     access_token = System.fetch_env!("TWITTER_ACCESS_TOKEN")
     access_token_secret = System.fetch_env!("TWITTER_ACCESS_TOKEN_SECRET")
+
     ExTwitter.configure(
       consumer_key: api_key,
       consumer_secret: api_key_secret,

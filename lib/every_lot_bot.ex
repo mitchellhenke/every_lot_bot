@@ -85,7 +85,10 @@ defmodule EveryLotBot do
     tweet_content = "#{property.address}, #{property.zip}"
 
     tweet = ExTwitter.update_with_media(tweet_content, image)
-    updated_properties = Map.put(updated_properties, property.tax_key, %{property | tweeted: tweet.id})
+
+    updated_properties =
+      Map.put(updated_properties, property.tax_key, %{property | tweeted: tweet.id})
+
     EveryLotBot.mark_as_tweeted(updated_properties)
   end
 
@@ -93,13 +96,14 @@ defmodule EveryLotBot do
     formatted_date = Date.to_iso8601(date)
     hash = :crypto.hash(:sha, formatted_date) |> :binary.decode_unsigned()
 
-    zips = Map.values(properties)
-           |> Enum.filter(fn property ->
-             property.tweeted == "0"
-           end)
-           |> Enum.reduce(MapSet.new, fn property, zips ->
-             MapSet.put(zips, property.zip)
-           end)
+    zips =
+      Map.values(properties)
+      |> Enum.filter(fn property ->
+        property.tweeted == "0"
+      end)
+      |> Enum.reduce(MapSet.new(), fn property, zips ->
+        MapSet.put(zips, property.zip)
+      end)
 
     index = rem(hash, Enum.count(zips))
     Enum.at(zips, index)
@@ -131,7 +135,7 @@ defmodule EveryLotBot do
   def mark_as_tweeted(properties) do
     rows =
       Map.values(properties)
-      |> Enum.sort_by(&(&1.tax_key))
+      |> Enum.sort_by(& &1.tax_key)
       |> Enum.map(fn property ->
         [
           property.tax_key,
@@ -163,6 +167,7 @@ defmodule EveryLotBot do
     ]
 
     stream = File.stream!("data.csv")
+
     MyCSV.dump_to_stream([headers | rows])
     |> Stream.into(stream)
     |> Stream.run()
@@ -175,8 +180,10 @@ defmodule EveryLotBot do
       headers = Enum.map(headers, &String.to_atom/1)
 
       Enum.map(rows, fn row ->
-        property = Enum.zip(headers, row)
-                   |> Enum.into(%{})
+        property =
+          Enum.zip(headers, row)
+          |> Enum.into(%{})
+
         {property.tax_key, property}
       end)
       |> Enum.into(%{})
