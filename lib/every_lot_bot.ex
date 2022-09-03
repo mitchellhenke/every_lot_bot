@@ -81,31 +81,45 @@ defmodule EveryLotBot do
 
     properties = EveryLotBot.load_properties()
     zip = EveryLotBot.get_zip_for_date(properties, date)
-    property = EveryLotBot.get_property_by_zip(properties, zip)
-    {_status, body} = EveryLotBot.get_streetview_image(property)
+    {updated_properties, property, image} = EveryLotBot.get_valid_property_by_zip(properties, zip)
     tweet_content = "#{property.address}, #{property.zip}"
 
-    tweet = ExTwitter.update_with_media(tweet_content, body)
-    EveryLotBot.mark_as_tweeted(properties, property.tax_key, tweet.id)
+    tweet = ExTwitter.update_with_media(tweet_content, image)
+    updated_properties = Map.put(updated_properties, property.tax_key, %{property | tweeted: tweet.id})
+    EveryLotBot.mark_as_tweeted(updated_properties)
   end
 
   def get_zip_for_date(properties, date) do
     formatted_date = Date.to_iso8601(date)
     hash = :crypto.hash(:sha, formatted_date) |> :binary.decode_unsigned()
 
-    zips = Enum.filter(properties, fn property ->
-      property.tweeted == "0"
-    end)
-    |> Enum.reduce(MapSet.new, fn property, zips ->
-      MapSet.put(zips, property.zip)
-    end)
+    zips = Map.values(properties)
+           |> Enum.filter(fn property ->
+             property.tweeted == "0"
+           end)
+           |> Enum.reduce(MapSet.new, fn property, zips ->
+             MapSet.put(zips, property.zip)
+           end)
 
     index = rem(hash, Enum.count(zips))
     Enum.at(zips, index)
   end
 
+  def get_valid_property_by_zip(properties, zip) do
+    property = get_property_by_zip(properties, zip)
+    {status, body} = get_streetview_image(property)
+
+    if status == 200 do
+      {properties, property, body}
+    else
+      properties = Map.put(properties, property.tweeted, %{property | tweeted: "1"})
+      get_valid_property_by_zip(properties, zip)
+    end
+  end
+
   def get_property_by_zip(properties, zip) do
-    Enum.filter(properties, fn property ->
+    Map.values(properties)
+    |> Enum.filter(fn property ->
       property.tweeted == "0"
     end)
     |> Enum.sort_by(fn property ->
@@ -114,38 +128,24 @@ defmodule EveryLotBot do
     |> hd()
   end
 
-  def mark_as_tweeted(properties, tax_key, tweet_id) do
+  def mark_as_tweeted(properties) do
     rows =
-      Enum.map(properties, fn property ->
-        if property.tax_key == tax_key do
-          [
-            property.tax_key,
-            property.address,
-            property.zip,
-            property.city,
-            property.lat,
-            property.lon,
-            property.year_built,
-            property.zoning,
-            property.geo_alder,
-            property.number_stories,
-            tweet_id
-          ]
-        else
-          [
-            property.tax_key,
-            property.address,
-            property.zip,
-            property.city,
-            property.lat,
-            property.lon,
-            property.year_built,
-            property.zoning,
-            property.geo_alder,
-            property.number_stories,
-            property.tweeted
-          ]
-        end
+      Map.values(properties)
+      |> Enum.sort_by(&(&1.tax_key))
+      |> Enum.map(fn property ->
+        [
+          property.tax_key,
+          property.address,
+          property.zip,
+          property.city,
+          property.lat,
+          property.lon,
+          property.year_built,
+          property.zoning,
+          property.geo_alder,
+          property.number_stories,
+          property.tweeted
+        ]
       end)
 
     headers = [
@@ -175,9 +175,11 @@ defmodule EveryLotBot do
       headers = Enum.map(headers, &String.to_atom/1)
 
       Enum.map(rows, fn row ->
-        Enum.zip(headers, row)
-        |> Enum.into(%{})
+        property = Enum.zip(headers, row)
+                   |> Enum.into(%{})
+        {property.tax_key, property}
       end)
+      |> Enum.into(%{})
     end
   end
 end
