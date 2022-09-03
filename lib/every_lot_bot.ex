@@ -93,13 +93,188 @@ defmodule EveryLotBot do
   end
 
   def make_tweet_content(property) do
-    if property.year_built > "1" do
-      """
-      #{property.address}, #{property.zip}
-      Year Built: #{property.year_built}\
-      """
+    zoning = zoning_content(property.zoning)
+
+    content =
+      if property.year_built > "1" do
+        """
+        #{property.address}, #{property.zip}
+        Year Built: #{property.year_built}\
+        """
+      else
+        "#{property.address}, #{property.zip}"
+      end
+
+    if zoning do
+      "#{content}\nZoning: #{zoning}"
     else
-      "#{property.address}, #{property.zip}"
+      content
+    end
+  end
+
+  defp zoning_content(zoning) do
+    case zoning do
+      "" ->
+        nil
+
+      "C9A(A)" ->
+        "Downtown High Density Residential - subdistrict A [C9A(A)]"
+
+      "C9A(B)" ->
+        "Downtown High Density Residential - subdistrict B [C9A(B)]"
+
+      "C9B(A)" ->
+        "Downtown Residential and Specialty Use - subdistrict A [C9B(A)]"
+
+      "C9B(B)" ->
+        "Downtown Residential and Specialty Use - subdistrict B [C9B(B)]"
+
+      "C9C" ->
+        "Downtown Neighborhood Retail [C9C]"
+
+      "C9D(A)" ->
+        "Downtown Civic Activity - subdistrict A [C9D(A)]"
+
+      "C9D(B)" ->
+        "Downtown Civic Activity - subdistrict B [C9D(B)]"
+
+      "C9E" ->
+        "Downtown Major Retail [C9E]"
+
+      "C9F(A)" ->
+        "Downtown Office and Service - subdistrict A [C9F(A)]"
+
+      "C9F(B)" ->
+        " - Downtown Office and Service - subdistrict B [C9F(B)]"
+
+      "C9F(C)" ->
+        "Downtown Office and Service - subdistrict C [C9F(C)]"
+
+      "C9G" ->
+        "Downtown Mixed Activity [C9G]"
+
+      "C9H" ->
+        "Downtown Warehousing and Light Manufacturing [C9H]"
+
+      "CS" ->
+        "Commercial Service [CS]"
+
+      "IC" ->
+        "Industrial-Commercial [IC]"
+
+      "IH" ->
+        "Industrial-Heavy [IH]"
+
+      "IL1" ->
+        "Industrial-Light 1 [IL1]"
+
+      "IL2" ->
+        "Industrial-Light 2 [IL2]"
+
+      "IM" ->
+        "Industrial-Mixed [IM]"
+
+      "IO1" ->
+        "Industrial-Office 1 [IO1]"
+
+      "IO2" ->
+        "Industrial-Office 2 [IO2]"
+
+      "LB1" ->
+        "Local Business 1 [LB1]"
+
+      "LB2" ->
+        "Local Business 2 [LB2]"
+
+      "LB3" ->
+        "Local Business 3 [LB3]"
+
+      "NS1" ->
+        "Neighborhood Shopping 1 [NS1]"
+
+      "NS2" ->
+        "Neighborhood Shopping 2 [NS2]"
+
+      "PD" ->
+        "Planned Development [PD]"
+
+      "PENDING" ->
+        "Pending"
+
+      "PK" ->
+        "Parks [PK]"
+
+      "RB1" ->
+        "Regional Business 1 [RB1]"
+
+      "RB2" ->
+        "Regional Business 2 [RB2]"
+
+      "RED" ->
+        "Redevelopment [RED]"
+
+      "RM1" ->
+        "Multi-Family Residential 1 [RM1]"
+
+      "RM2" ->
+        "Multi-Family Residential 2 [RM2]"
+
+      "RM3" ->
+        "Multi-Family Residential 3 [RM3]"
+
+      "RM4" ->
+        "Multi-Family Residential 4 [RM4]"
+
+      "RM5" ->
+        "Multi-Family Residential 5 [RM5]"
+
+      "RM6" ->
+        "Multi-Family Residential 6 [RM6]"
+
+      "RM7" ->
+        "Multi-Family Residential 7 [RM7]"
+
+      "RO1" ->
+        "Residential and Office 1 [RO1]"
+
+      "RO2" ->
+        "Residential and Office 2 [RO2]"
+
+      "RS1" ->
+        "Single-Family Residential 1 [RS1]"
+
+      "RS2" ->
+        "Single-Family Residential 2 [RS2]"
+
+      "RS3" ->
+        "Single-Family Residential 3 [RS3]"
+
+      "RS4" ->
+        "Single-Family Residential 4 [RS4]"
+
+      "RS5" ->
+        "Single-Family Residential 5 [RS5]"
+
+      "RS6" ->
+        "Single-Family Residential 6 [RS6]"
+
+      "RT1" ->
+        "Two-Family Residential 1 [RT1]"
+
+      "RT2" ->
+        "Two-Family Residential 2 [RT2]"
+
+      "RT3" ->
+        "Two-Family Residential 3 [RT3]"
+
+      "RT4" ->
+        "Two-Family Residential 4 [RT4]"
+
+      "TL" ->
+        "Institutional [TL]"
+
+      "X" ->
+        "X"
     end
   end
 
