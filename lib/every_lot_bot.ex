@@ -60,7 +60,7 @@ defmodule EveryLotBot do
       fov: 65,
       pitch: 10,
       size: "1000x1000",
-      key: "",
+      key: System.fetch_env!("GOOGLE_IMAGE_API_KEY"),
       location: search_query,
       return_error_code: true,
       source: "outdoor"
@@ -85,8 +85,8 @@ defmodule EveryLotBot do
     {_status, body} = EveryLotBot.get_streetview_image(property)
     tweet_content = "#{property.address}, #{property.zip}"
 
-    # tweet = ExTwitter.update_with_media(tweet_content, body)
-    EveryLotBot.mark_as_tweeted(properties, property.tax_key, "1")
+    tweet = ExTwitter.update_with_media(tweet_content, body)
+    EveryLotBot.mark_as_tweeted(properties, property.tax_key, tweet.id)
   end
 
   def get_zip_for_date(properties, date) do
