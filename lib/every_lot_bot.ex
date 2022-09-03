@@ -82,7 +82,7 @@ defmodule EveryLotBot do
     properties = EveryLotBot.load_properties()
     zip = EveryLotBot.get_zip_for_date(properties, date)
     {updated_properties, property, image} = EveryLotBot.get_valid_property_by_zip(properties, zip)
-    tweet_content = "#{property.address}, #{property.zip}"
+    tweet_content = make_tweet_content(property)
 
     tweet = ExTwitter.update_with_media(tweet_content, image)
 
@@ -90,6 +90,17 @@ defmodule EveryLotBot do
       Map.put(updated_properties, property.tax_key, %{property | tweeted: tweet.id})
 
     EveryLotBot.mark_as_tweeted(updated_properties)
+  end
+
+  def make_tweet_content(property) do
+    if property.year_built > "1" do
+      """
+      #{property.address}, #{property.zip}
+      Year Built: #{property.year_built}\
+      """
+    else
+      "#{property.address}, #{property.zip}"
+    end
   end
 
   def get_zip_for_date(properties, date) do
