@@ -1,4 +1,4 @@
-CREATE TABLE lots(id INTEGER PRIMARY KEY, tax_key,address,zip,city,lat REAL,lon REAL,year_built,zoning,geo_alder,number_stories,tweeted INTEGER);
+CREATE TABLE lots(tax_key,address,zip,city,lat REAL,lon REAL,year_built,zoning,geo_alder,number_stories,tweeted INTEGER);
 .mode csv
 .import data.csv lots_temp
 INSERT INTO lots(tax_key,address,zip,city,lat,lon,year_built,zoning,geo_alder,number_stories,tweeted) SELECT * from lots_temp;
@@ -6,20 +6,14 @@ drop table lots_temp;
 
 ATTACH 'old_lots.db' AS OLD;
 
-update lots
-     set tweeted = (
-          select OLD.lots.tweeted 
-          from OLD.lots
-          where OLD.lots.address = lots.address and
-            OLD.lots.zip = lots.zip
-     )
-     where EXISTS (SELECT tweeted
-                  FROM OLD.lots
-                  WHERE address = OLD.lots.address and zip = OLD.lots.zip
- );
-
-
 UPDATE lots AS l
 SET tweeted = o.tweeted
 FROM (SELECT tweeted, address, zip FROM OLD.lots) AS o
 WHERE o.address = l.address and o.zip = l.zip;
+
+.headers on
+.mode csv
+.output data.csv
+.separator , \n
+select * from lots;
+.quit
