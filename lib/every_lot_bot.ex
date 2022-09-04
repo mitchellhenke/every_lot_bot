@@ -126,6 +126,7 @@ defmodule EveryLotBot do
     else
       content
     end
+    |> String.trim()
   end
 
   defp zoning_content(zoning) do
