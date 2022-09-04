@@ -114,10 +114,11 @@ defmodule EveryLotBot do
       if property.year_built > "1" do
         """
         #{property.address}, #{property.zip}
+
         Year Built: #{property.year_built}\
         """
       else
-        "#{property.address}, #{property.zip}"
+        "#{property.address}, #{property.zip}\n"
       end
 
     if zoning do
