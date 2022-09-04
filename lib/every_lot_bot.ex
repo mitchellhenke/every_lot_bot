@@ -56,6 +56,12 @@ defmodule EveryLotBot do
     search_query = "#{property.address}, #{property.city}, WI"
     url = "https://maps.googleapis.com/maps/api/streetview"
 
+    secret =
+      System.fetch_env!("GOOGLE_IMAGE_API_SECRET")
+      |> String.replace("-", "+")
+      |> String.replace("_", "/")
+      |> Base.decode64!()
+
     params = %{
       fov: 65,
       pitch: 10,
@@ -66,10 +72,17 @@ defmodule EveryLotBot do
       source: "outdoor"
     }
 
-    full_url = "#{url}?#{URI.encode_query(params)}"
+    full_uri = URI.parse("#{url}?#{URI.encode_query(params)}")
 
-    with req <- Finch.build(:get, full_url),
-         {:ok, %{body: body, status: status}} <- Finch.request(req, MyFinch) do
+    signature =
+      :crypto.mac(:hmac, :sha, secret, "#{full_uri.path}?#{full_uri.query}")
+      |> Base.encode64()
+      |> String.replace("+", "-")
+      |> String.replace("/", "_")
+
+    with req <- Finch.build(:get, "#{URI.to_string(full_uri)}&signature=#{signature}"),
+         {:ok, %{body: body, status: status}} <- Finch.request(req, MyFinch),
+         true <- status in [200, 404] do
       {status, body}
     end
   end
