@@ -80,7 +80,9 @@ defmodule EveryLotBot do
       |> String.replace("+", "-")
       |> String.replace("/", "_")
 
-    with req <- Finch.build(:get, "#{URI.to_string(full_uri)}&signature=#{signature}"),
+    final_url = "#{URI.to_string(full_uri)}&signature=#{signature}"
+
+    with req <- Finch.build(:get, final_url),
          {:ok, %{body: body, status: status}} <- Finch.request(req, MyFinch),
          true <- status in [200, 404] do
       {status, body}
@@ -315,7 +317,7 @@ defmodule EveryLotBot do
     if status == 200 do
       {properties, property, body}
     else
-      properties = Map.put(properties, property.tweeted, %{property | tweeted: "1"})
+      properties = Map.put(properties, property.tax_key, %{property | tweeted: "1"})
       get_valid_property_by_zip(properties, zip)
     end
   end
