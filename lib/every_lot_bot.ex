@@ -63,6 +63,7 @@ defmodule EveryLotBot do
   def make_tweet_content(property) do
     zoning = zoning_content(property.zoning)
     assessment = assessment_content(property)
+    neighborhood = neighborhood_content(property)
 
     content =
       if property.year_built > "1" do
@@ -81,8 +82,14 @@ defmodule EveryLotBot do
       content
     end
 
-    if assessment do
+    content = if assessment do
       "#{content}\nAssessment: #{assessment}"
+    else
+      content
+    end
+
+    if neighborhood do
+      "#{content}\nNeighborhood: #{neighborhood}"
     else
       content
     end
@@ -261,6 +268,14 @@ defmodule EveryLotBot do
       number = to_string(String.to_integer(amount))
       formatted = Regex.replace(@number_regex, number, ",")
       "$#{formatted}"
+    else
+      nil
+    end
+  end
+
+  defp neighborhood_content(property) do
+    if property.neighborhood != "" do
+      property.neighborhood
     else
       nil
     end
