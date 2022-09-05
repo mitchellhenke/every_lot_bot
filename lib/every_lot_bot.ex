@@ -303,6 +303,8 @@ defmodule EveryLotBot do
           property.zoning,
           property.geo_alder,
           property.number_stories,
+          property.last_assessment_amount,
+          property.count,
           property.tweeted
         ]
       end)
@@ -318,6 +320,8 @@ defmodule EveryLotBot do
       "zoning",
       "geo_alder",
       "number_stories",
+      "last_assessment_amount",
+      "count",
       "tweeted"
     ]
 
@@ -343,6 +347,50 @@ defmodule EveryLotBot do
       end)
       |> Enum.into(%{})
     end
+  end
+
+  def migrate(old_file, new_file) do
+    old_properties = with {:ok, content} <- File.read(old_file),
+         csv_rows <- MyCSV.parse_string(content, skip_headers: false) do
+      {[headers], rows} = Enum.split(csv_rows, 1)
+      headers = Enum.map(headers, &String.to_atom/1)
+
+      Enum.map(rows, fn row ->
+        property =
+          Enum.zip(headers, row)
+          |> Enum.into(%{})
+
+        {property.tax_key, property}
+      end)
+      |> Enum.into(%{})
+    end
+
+    new_properties = with {:ok, content} <- File.read(new_file),
+         csv_rows <- MyCSV.parse_string(content, skip_headers: false) do
+      {[headers], rows} = Enum.split(csv_rows, 1)
+      headers = Enum.map(headers, &String.to_atom/1)
+
+      Enum.map(rows, fn row ->
+        property =
+          Enum.zip(headers, row)
+          |> Enum.into(%{})
+
+        {property.tax_key, property}
+      end)
+      |> Enum.into(%{})
+    end
+
+    updated_properties = Enum.reduce(new_properties, %{}, fn({_key, property}, acc) ->
+      old = Map.get(old_properties, property.tax_key)
+
+      if old do
+        Map.put(acc, property.tax_key, %{property | tweeted: old.tweeted})
+      else
+        Map.put(acc, property.tax_key, property)
+      end
+    end)
+
+    EveryLotBot.mark_as_tweeted(updated_properties)
   end
 end
 
