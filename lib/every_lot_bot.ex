@@ -2,6 +2,7 @@ defmodule EveryLotBot do
   @moduledoc """
   Documentation for `EveryLotBot`.
   """
+  @number_regex ~r/\B(?=(\d{3})+(?!\d))/
   NimbleCSV.define(MyCSV, newlines: ["\n"])
 
   def get_streetview_image(property) do
@@ -61,6 +62,7 @@ defmodule EveryLotBot do
 
   def make_tweet_content(property) do
     zoning = zoning_content(property.zoning)
+    assessment = assessment_content(property)
 
     content =
       if property.year_built > "1" do
@@ -73,8 +75,14 @@ defmodule EveryLotBot do
         "#{property.address}, #{property.zip}\n"
       end
 
-    if zoning do
+    content = if zoning do
       "#{content}\nZoning: #{zoning}"
+    else
+      content
+    end
+
+    if assessment do
+      "#{content}\nAssessment: #{assessment}"
     else
       content
     end
@@ -244,6 +252,17 @@ defmodule EveryLotBot do
 
       "X" ->
         "X"
+    end
+  end
+
+  defp assessment_content(property) do
+    if property.count == "1" do
+      amount = property.last_assessment_amount
+      number = to_string(String.to_integer(amount))
+      formatted = Regex.replace(@number_regex, number, ",")
+      "$#{formatted}"
+    else
+      nil
     end
   end
 
