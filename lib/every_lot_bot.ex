@@ -323,6 +323,7 @@ defmodule EveryLotBot do
           property.geo_alder,
           property.number_stories,
           property.last_assessment_amount,
+          property.neighborhood,
           property.count,
           property.tweeted
         ]
@@ -340,6 +341,7 @@ defmodule EveryLotBot do
       "geo_alder",
       "number_stories",
       "last_assessment_amount",
+      "neighborhood",
       "count",
       "tweeted"
     ]
