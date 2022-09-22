@@ -40,8 +40,8 @@ jobs:
       - name: Post Update
         run: |
           mix every_lot_bot.post_update
-          git config --global user.email "mitchell@mitchellhenke.com"
-          git config --global user.name "Mitchell Henke"
+          git config --global user.email "bot@mitchellhenke.com"
+          git config --global user.name "Mitchell Henke (Bot)"
           git add data.csv
           git commit -m 'Posting'
           git push origin
