@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: erlef/setup-beam@v1
         with:
-          otp-version: '23'
+          otp-version: '24.3'
           elixir-version: '1.13'
       - name: Retrieve Cached Dependencies
         uses: actions/cache@v2
