@@ -14,6 +14,7 @@ jobs:
       TWITTER_ACCESS_TOKEN_SECRET: ${{ secrets.TWITTER_CONSUMER_ACCESS_TOKEN_SECRET }}
       GOOGLE_IMAGE_API_KEY: ${{ secrets.GOOGLE_IMAGE_API_KEY }}
       GOOGLE_IMAGE_API_SECRET: ${{ secrets.GOOGLE_IMAGE_API_SECRET }}
+      MASTODON_ACCESS_TOKEN: ${{ secrets.MASTODON_ACCESS_TOKEN }}
     steps:
       - uses: actions/checkout@v2
       - uses: erlef/setup-beam@v1

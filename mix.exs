@@ -23,6 +23,7 @@ defmodule EveryLotBot.MixProject do
     [
       {:finch, "~> 0.13.0"},
       {:extwitter, ">= 0.0.0"},
+      {:tesla, ">= 0.0.0"},
       {:exqlite, ">= 0.0.0"},
       {:tzdata, "~> 1.1"},
       {:nimble_csv, "~> 1.1"}
