@@ -52,44 +52,58 @@ defmodule EveryLotBot do
     {updated_properties, property, image} = EveryLotBot.get_valid_property_by_zip(properties, zip)
     tweet_content = make_tweet_content(property)
 
-    tweet = ExTwitter.update_with_media(tweet_content, image)
+    # tweet = ExTwitter.update_with_media(tweet_content, image)
+    json = post_to_mastodon(tweet_content, image)
 
     updated_properties =
-      Map.put(updated_properties, property.tax_key, %{property | tweeted: tweet.id})
+      Map.put(updated_properties, property.tax_key, %{property | tweeted: Map.fetch!(json, "id")})
 
     EveryLotBot.mark_as_tweeted(updated_properties)
-    post_to_mastodon(tweet_content, image)
   end
 
   def post_to_mastodon(content, image) do
     access_token = System.fetch_env!("MASTODON_ACCESS_TOKEN")
+
     multipart =
       Tesla.Multipart.new()
-      |> Tesla.Multipart.add_file_content(image, "image.jpeg", headers: [{"content-type", "image/jpeg"}])
+      |> Tesla.Multipart.add_file_content(image, "image.jpeg",
+        headers: [{"content-type", "image/jpeg"}]
+      )
+
     headers = Tesla.Multipart.headers(multipart)
     body = Tesla.Multipart.body(multipart)
 
     headers = headers ++ [{"authorization", "Bearer #{access_token}"}]
-    media_id = with req <- Finch.build(:post, "https://botsin.space/api/v1/media", headers, {:stream, body}),
-         {:ok, %{status: status, headers: _headers, body: body}} <- Finch.request(req, MyFinch),
-         true <- status == 200,
-         {:ok, json} <- Jason.decode(body),
-         {:ok, id} <- Map.fetch(json, "id") do
-      id
-    end
-    body = %{
-      status: content,
-      media_ids: [media_id]
-    }    |> Jason.encode!()
+
+    media_id =
+      with req <-
+             Finch.build(:post, "https://botsin.space/api/v1/media", headers, {:stream, body}),
+           {:ok, %{status: status, headers: _headers, body: body}} <-
+             Finch.request(req, MyFinch, receive_timeout: 30_000),
+           true <- status == 200,
+           {:ok, json} <- Jason.decode(body),
+           {:ok, id} <- Map.fetch(json, "id") do
+        id
+      end
+
+    body =
+      %{
+        status: content,
+        media_ids: [media_id]
+      }
+      |> Jason.encode!()
 
     headers = [{"content-type", "application/json"}, {"authorization", "Bearer #{access_token}"}]
-    response = with req <- Finch.build(:post, "https://botsin.space/api/v1/statuses", headers, body),
-         {:ok, resp = %{status: status, headers: _headers, body: body}} <- Finch.request(req, MyFinch),
-         true <- status == 200,
-         {:ok, json} <- Jason.decode(body),
-         {:ok, _id} <- Map.fetch(json, "id") do
-      resp
-    end
+
+    response =
+      with req <- Finch.build(:post, "https://botsin.space/api/v1/statuses", headers, body),
+           {:ok, resp = %{status: status, headers: _headers, body: body}} <-
+             Finch.request(req, MyFinch, receive_timeout: 30_000),
+           true <- status == 200,
+           {:ok, json} <- Jason.decode(body),
+           {:ok, _id} <- Map.fetch(json, "id") do
+        json
+      end
   end
 
   def make_tweet_content(property) do
