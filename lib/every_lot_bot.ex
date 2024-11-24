@@ -52,11 +52,10 @@ defmodule EveryLotBot do
     {updated_properties, property, image} = EveryLotBot.get_valid_property_by_zip(properties, zip)
     tweet_content = make_tweet_content(property)
 
-    # tweet = ExTwitter.update_with_media(tweet_content, image)
-    json = post_to_mastodon(tweet_content, image)
+    json = post_to_bluesky(tweet_content, image)
 
     updated_properties =
-      Map.put(updated_properties, property.tax_key, %{property | tweeted: Map.fetch!(json, "id")})
+      Map.put(updated_properties, property.tax_key, %{property | tweeted: Map.fetch!(json, "uri")})
 
     EveryLotBot.mark_as_tweeted(updated_properties)
   end
@@ -95,15 +94,14 @@ defmodule EveryLotBot do
 
     headers = [{"content-type", "application/json"}, {"authorization", "Bearer #{access_token}"}]
 
-    response =
-      with req <- Finch.build(:post, "https://botsin.space/api/v1/statuses", headers, body),
-           {:ok, resp = %{status: status, headers: _headers, body: body}} <-
-             Finch.request(req, MyFinch, receive_timeout: 30_000),
-           true <- status == 200,
-           {:ok, json} <- Jason.decode(body),
-           {:ok, _id} <- Map.fetch(json, "id") do
-        json
-      end
+    with req <- Finch.build(:post, "https://botsin.space/api/v1/statuses", headers, body),
+         {:ok, %{status: status, headers: _headers, body: body}} <-
+           Finch.request(req, MyFinch, receive_timeout: 30_000),
+         true <- status == 200,
+         {:ok, json} <- Jason.decode(body),
+         {:ok, _id} <- Map.fetch(json, "id") do
+      json
+    end
   end
 
   def make_tweet_content(property) do
@@ -478,6 +476,73 @@ defmodule EveryLotBot do
       end)
 
     EveryLotBot.mark_as_tweeted(updated_properties)
+  end
+
+  def post_to_bluesky(content, image) do
+    bluesky_username = System.fetch_env!("BLUESKY_USERNAME")
+    bluesky_password = System.fetch_env!("BLUESKY_PASSWORD")
+
+    req =
+      Finch.build(
+        :post,
+        "https://bsky.social/xrpc/com.atproto.server.createSession",
+        [{"Content-Type", "application/json"}],
+        Jason.encode!(%{
+          identifier: bluesky_username,
+          password: bluesky_password
+        })
+      )
+
+    token =
+      with {:ok, %{status: 200, headers: _headers, body: body}} <- Finch.request(req, MyFinch),
+           {:ok, json} <- Jason.decode(body),
+           {:ok, access_jwt} <- Map.fetch(json, "accessJwt") do
+        access_jwt
+      end
+
+    headers = [{"Content-Type", "image/jpeg"}, {"Authorization", "Bearer #{token}"}]
+
+    req =
+      Finch.build(:post, "https://bsky.social/xrpc/com.atproto.repo.uploadBlob", headers, image)
+
+    blob =
+      with {:ok, %{status: 200, headers: _headers, body: body}} <- Finch.request(req, MyFinch),
+           {:ok, json} <- Jason.decode(body),
+           {:ok, blob} <- Map.fetch(json, "blob") do
+        blob
+      end
+
+    headers = [{"Content-Type", "application/json"}, {"Authorization", "Bearer #{token}"}]
+
+    req =
+      Finch.build(
+        :post,
+        "https://bsky.social/xrpc/com.atproto.repo.createRecord",
+        headers,
+        Jason.encode!(%{
+          repo: bluesky_username,
+          collection: "app.bsky.feed.post",
+          record: %{
+            embed: %{
+              "$type": "app.bsky.embed.images",
+              images: [
+                %{
+                  alt: "",
+                  image: blob
+                }
+              ]
+            },
+            createdAt: DateTime.to_iso8601(DateTime.utc_now()),
+            text: content
+          }
+        })
+      )
+
+    with {:ok, %{status: 200, headers: _headers, body: body}} <- Finch.request(req, MyFinch),
+         {:ok, json} <- Jason.decode(body),
+         {:ok, _uri} <- Map.fetch(json, "uri") do
+      json
+    end
   end
 end
 
