@@ -22,7 +22,6 @@ defmodule EveryLotBot.MixProject do
   defp deps do
     [
       {:finch, "~> 0.19.0"},
-      {:tesla, ">= 0.0.0"},
       {:tzdata, "~> 1.1"},
       {:nimble_csv, "~> 1.1"},
       {:jason, "~> 1.0"}
