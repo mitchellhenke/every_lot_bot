@@ -21,7 +21,7 @@ defmodule EveryLotBot.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:finch, "~> 0.14.0"},
+      {:finch, "~> 0.19.0"},
       {:tesla, ">= 0.0.0"},
       {:tzdata, "~> 1.1"},
       {:nimble_csv, "~> 1.1"},
