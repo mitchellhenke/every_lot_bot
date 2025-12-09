@@ -5,7 +5,7 @@ defmodule EveryLotBot.MixProject do
     [
       app: :every_lot_bot,
       version: "0.1.0",
-      elixir: "~> 1.17",
+      elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
       deps: deps()
     ]
@@ -21,7 +21,7 @@ defmodule EveryLotBot.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:finch, "~> 0.19.0"},
+      {:finch, "~> 0.20.0"},
       {:tzdata, "~> 1.1"},
       {:nimble_csv, "~> 1.1"},
       {:jason, "~> 1.0"}
