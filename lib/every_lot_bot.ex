@@ -3,7 +3,7 @@ defmodule EveryLotBot do
   Documentation for `EveryLotBot`.
   """
   @number_regex ~r/\B(?=(\d{3})+(?!\d))/
-  NimbleCSV.define(MyCSV, newlines: ["\n"])
+  alias NimbleCSV.RFC4180, as: MyCSV
 
   def get_streetview_image(property) do
     search_query = "#{property.address}, #{property.city}, WI"
