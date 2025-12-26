@@ -85,7 +85,7 @@ defmodule Mix.Tasks.EveryLotBot.DataUpdate do
     new_keys = MapSet.new(Map.keys(new_data))
     old_keys = MapSet.new(Map.keys(old_data))
     removed_keys = MapSet.difference(old_keys, new_keys)
-    _added_keys = MapSet.difference(new_keys, old_keys)
+    added_keys = MapSet.difference(new_keys, old_keys)
 
     IO.inspect("Never Been Posted")
 
@@ -93,7 +93,16 @@ defmodule Mix.Tasks.EveryLotBot.DataUpdate do
       MapSet.member?(removed_keys, key) && map.tweeted == "0"
     end)
     |> Enum.each(fn {_key, map} ->
-      IO.inspect(map.address)
+      IO.inspect("#{map.zip} - #{map.address}")
+    end)
+
+    IO.inspect("New Keys")
+
+    Enum.filter(new_data, fn {key, _map} ->
+      MapSet.member?(added_keys, key)
+    end)
+    |> Enum.each(fn {_key, map} ->
+      IO.inspect("#{map.zip} - #{map.address}")
     end)
 
     updated_new =
